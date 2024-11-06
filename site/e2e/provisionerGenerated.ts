@@ -224,6 +224,12 @@ export interface Resource_Metadata {
 	isNull: boolean;
 }
 
+export interface Module {
+	source: string;
+	version: string;
+	key: string;
+}
+
 /** Metadata is information about a workspace used in the execution of a build */
 export interface Metadata {
 	coderUrl: string;
@@ -285,6 +291,7 @@ export interface PlanComplete {
 	parameters: RichParameter[];
 	externalAuthProviders: ExternalAuthProviderResource[];
 	timings: Timing[];
+	modules: Module[];
 }
 
 /**
@@ -822,6 +829,24 @@ export const Resource_Metadata = {
 	},
 };
 
+export const Module = {
+	encode(
+		message: Module,
+		writer: _m0.Writer = _m0.Writer.create(),
+	): _m0.Writer {
+		if (message.source !== "") {
+			writer.uint32(10).string(message.source);
+		}
+		if (message.version !== "") {
+			writer.uint32(18).string(message.version);
+		}
+		if (message.key !== "") {
+			writer.uint32(26).string(message.key);
+		}
+		return writer;
+	},
+};
+
 export const Metadata = {
 	encode(
 		message: Metadata,
@@ -991,6 +1016,9 @@ export const PlanComplete = {
 		}
 		for (const v of message.timings) {
 			Timing.encode(v!, writer.uint32(50).fork()).ldelim();
+		}
+		for (const v of message.modules) {
+			Module.encode(v!, writer.uint32(58).fork()).ldelim();
 		}
 		return writer;
 	},
