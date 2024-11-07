@@ -440,14 +440,15 @@ jobs:
             --first-user-username pr${{ env.PR_NUMBER }}-admin \
             --first-user-email pr${{ env.PR_NUMBER }}@coder.com \
             --first-user-password $password \
+            --first-user-trial=false \
             --use-token-as-session \
             https://${{ env.PR_HOSTNAME }}
 
           # Create a user for the github.actor
           coder users create \
-            --user ${{ github.actor }} \
+            --username ${{ github.actor }} \
             --password $password \
-            --email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com" \ # this will be overwritten by the user's email when they login via github
+            --email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com" \
             --login-type github
 
           # promote the user to admin role
