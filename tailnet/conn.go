@@ -33,6 +33,7 @@ import (
 	tslogger "tailscale.com/types/logger"
 	"tailscale.com/types/netlogtype"
 	"tailscale.com/types/netmap"
+	"tailscale.com/util/dnsname"
 	"tailscale.com/wgengine"
 	"tailscale.com/wgengine/capture"
 	"tailscale.com/wgengine/magicsock"
@@ -287,6 +288,7 @@ func NewConn(options *Options) (conn *Conn, err error) {
 		configMaps:      cfgMaps,
 		nodeUpdater:     nodeUp,
 		telemetrySink:   options.TelemetrySink,
+		dnsConfigurator: options.DNSConfigurator,
 		telemetryStore:  telemetryStore,
 		createdAt:       time.Now(),
 		watchCtx:        ctx,
@@ -347,7 +349,8 @@ var (
 	// process of migrating to. It allows Coder to run alongside Tailscale without conflicts even
 	// if both are set up as TUN interfaces into the OS (e.g. CoderVPN).
 	// fd60:627a:a42b::/48
-	CoderServicePrefix ServicePrefix = [6]byte{0xfd, 0x60, 0x62, 0x7a, 0xa4, 0x2b}
+	CoderServicePrefix     ServicePrefix = [6]byte{0xfd, 0x60, 0x62, 0x7a, 0xa4, 0x2b}
+	CoderServicePrefixCIDR               = netip.MustParsePrefix("fd60:627a:a42b::/48")
 )
 
 // maskUUID returns a new UUID with the first 6 bytes changed to the ServicePrefix
@@ -393,6 +396,7 @@ type Conn struct {
 	wireguardMonitor *netmon.Monitor
 	wireguardRouter  *router.Config
 	wireguardEngine  wgengine.Engine
+	dnsConfigurator  dns.OSConfigurator
 	listeners        map[listenKey]*listener
 	clientType       proto.TelemetryEvent_ClientType
 	createdAt        time.Time
@@ -437,6 +441,18 @@ func (c *Conn) SetAddresses(ips []netip.Prefix) error {
 	c.configMaps.setAddresses(ips)
 	c.nodeUpdater.setAddresses(ips)
 	return nil
+}
+
+func (c *Conn) AddDNSHosts(hosts map[dnsname.FQDN][]netip.Addr) {
+	if c.dnsConfigurator == nil {
+		c.logger.Warn(context.Background(), "no DNSConfigurator set, rejecting custom DNS hosts")
+		return
+	}
+	c.configMaps.addHosts(hosts)
+}
+
+func (c *Conn) RemoveDNSHosts(names []dnsname.FQDN) {
+	c.configMaps.removeHosts(names)
 }
 
 func (c *Conn) SetNodeCallback(callback func(node *Node)) {
